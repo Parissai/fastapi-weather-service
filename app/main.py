@@ -45,7 +45,7 @@ database.init_db()
 
 app = FastAPI()
 
-@app.get("/weather/", response_model=schemas.WeatherResponse)
+@app.get("/weather", response_model=schemas.WeatherResponse)
 async def get_weather(city: str, date: str, db: Session = Depends(database.get_db)):
     """
     Retrieve weather data for a specific city and date.

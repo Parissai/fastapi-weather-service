@@ -6,16 +6,16 @@ client = TestClient(app)
 
 def test_get_weather():
     """
-    Test the `/weather/` endpoint for retrieving weather data for a specific city and date.
+    Test the `/weather` endpoint for retrieving weather data for a specific city and date.
 
-    This test sends a GET request to the `/weather/` endpoint with the query parameters 
+    This test sends a GET request to the `/weather` endpoint with the query parameters 
     `city` set to "London" and `date` set to "2024-08-09". It asserts that the response 
     status code is 200, indicating a successful request. The test also checks that the 
     response JSON contains the expected keys: "city", "date", "min_temp", "max_temp", 
     and "avg_temp".
 
     Steps:
-        1. Sends a GET request to the `/weather/` endpoint with the query parameters 
+        1. Sends a GET request to the `/weather` endpoint with the query parameters 
         `city` set to "London" and `date` set to "2024-08-09".
         2. Asserts that the response status code is 200, indicating a successful request.
         3. Parses the JSON response data.
@@ -40,7 +40,7 @@ def test_get_weather():
         }
     """
      
-    response = client.get("/weather/?city=London&date=2024-08-09")
+    response = client.get("/weather?city=London&date=2024-08-09")
     assert response.status_code == 200
     data = response.json()
     print('data', data)
