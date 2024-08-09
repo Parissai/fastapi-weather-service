@@ -163,3 +163,4 @@ cython_debug/
 
 # Ignore SQLite database file
 weather.db
+test.db

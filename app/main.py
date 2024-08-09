@@ -78,6 +78,7 @@ async def get_weather(city: str, date: str, db: Session = Depends(database.get_d
         raise HTTPException(status_code=500, detail="Internal server error. Please try again later.")
     
     if not weather_data:
+        logger.info(f"No weather data found for city '{city}' on date '{date}'")
         raise HTTPException(status_code=404, detail="Weather data not found")
 
     return weather_data

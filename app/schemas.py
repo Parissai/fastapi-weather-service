@@ -1,13 +1,16 @@
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, field_validator, ConfigDict
 from datetime import datetime
 
 class WeatherBase(BaseModel):
-    city: str = Field(..., example="New York", min_length=1)
+    city: str
     date: datetime
-    min_temp: float = Field(..., gt=-100.0, lt=100.0, example=10.5)
-    max_temp: float = Field(..., gt=-100.0, lt=100.0, example=25.5)
-    avg_temp: float = Field(..., gt=-100.0, lt=100.0, example=18.0)
-    humidity: float = Field(..., ge=0.0, le=100.0, example=65.0)
+    min_temp: float
+    max_temp: float
+    avg_temp: float
+    humidity: float
+
+    model_config = ConfigDict(from_attributes=True)
+
 
     @field_validator('date', mode='before')
     def check_date(cls, value):
