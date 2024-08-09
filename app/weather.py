@@ -9,6 +9,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment variables
 load_dotenv()
 
 class Config:
@@ -20,6 +21,8 @@ class Config:
         if not Config.API_KEY:
             raise ValueError("Weather API key is missing. Please set WEATHER_API_KEY in the environment variables.")
 
+# Validate configuration
+Config.validate()
 
 async def fetch_weather_data(city: str, date: str) -> dict:
     """
@@ -38,7 +41,10 @@ async def fetch_weather_data(city: str, date: str) -> dict:
     """
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(WEATHER_API_URL, params={"key": API_KEY, "q": city, "dt": date})
+            response = await client.get(
+                Config.WEATHER_API_URL,
+                params={"key": Config.API_KEY, "q": city, "dt": date}
+            )
             response.raise_for_status()
             data = response.json()
             
@@ -65,7 +71,7 @@ async def get_weather(db: Session, city: str, date: str) -> schemas.WeatherRespo
         date (str): The date to get weather data for, in 'YYYY-MM-DD' format.
 
     Returns:
-        schemas.Weather: The weather data object.
+        schemas.WeatherResponse: The weather data object.
 
     Raises:
         Exception: If there is an error fetching or storing weather data.
