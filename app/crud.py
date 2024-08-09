@@ -1,7 +1,12 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
-
 from app import models, schemas
+import logging
+
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def get_weather_by_city_and_date(db: Session, city: str, date: datetime):
     """
@@ -18,8 +23,11 @@ def get_weather_by_city_and_date(db: Session, city: str, date: datetime):
         models.Weather or None: The weather record as a SQLAlchemy model instance if found, 
         otherwise `None`.
     """
-    
-    return db.query(models.Weather).filter(models.Weather.city == city, models.Weather.date == date).first()
+    try:
+        return db.query(models.Weather).filter(models.Weather.city == city, models.Weather.date == date).first()
+    except SQLAlchemyError as e:
+        logger.error(f"Error querying weather by city and date: {e}")
+        raise
 
 def create_weather(db: Session, weather: schemas.WeatherCreate):
     """
@@ -36,11 +44,18 @@ def create_weather(db: Session, weather: schemas.WeatherCreate):
 
     Returns:
         models.Weather: The newly created weather record as a SQLAlchemy model instance.
+    
+    Raises:
+        Exception: If there is an error creating the weather record.
     """
-
     db_weather = models.Weather(**weather.model_dump())
-    db.add(db_weather)
-    db.commit()
-    db.refresh(db_weather)
-
-    return db_weather
+    
+    try:
+        db.add(db_weather)
+        db.commit()
+        db.refresh(db_weather)
+        return db_weather
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error creating weather record: {e}")
+        raise

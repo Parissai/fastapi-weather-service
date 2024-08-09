@@ -37,13 +37,15 @@ async def fetch_weather_data(city: str, date: str) -> dict:
 
     Raises:
         httpx.HTTPStatusError: If the HTTP request to the weather API fails.
+        httpx.RequestError: For network-related errors.
         ValueError: If the response does not contain expected data.
     """
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
                 Config.WEATHER_API_URL,
-                params={"key": Config.API_KEY, "q": city, "dt": date}
+                params={"key": Config.API_KEY, "q": city, "dt": date},
+                timeout=10.0
             )
             response.raise_for_status()
             data = response.json()
@@ -54,11 +56,17 @@ async def fetch_weather_data(city: str, date: str) -> dict:
                 raise ValueError("Unexpected response structure from weather API.")
             
             return data
+        except httpx.RequestError as e:
+            logger.error("Network-related error occurred while requesting weather data: %s", e)
+            raise
         except httpx.HTTPStatusError as e:
-            logger.error("HTTP request failed: %s", e)
+            logger.error("HTTP request failed with status %d: %s", e.response.status_code, e)
             raise
         except ValueError as e:
             logger.error("Data validation error: %s", e)
+            raise
+        except Exception as e:
+            logger.error("Unexpected error: %s", e)
             raise
 
 async def get_weather(db: Session, city: str, date: str) -> schemas.WeatherResponse:
@@ -74,30 +82,34 @@ async def get_weather(db: Session, city: str, date: str) -> schemas.WeatherRespo
         schemas.WeatherResponse: The weather data object.
 
     Raises:
+        ValueError: If there's an issue with data retrieval or storage.
         Exception: If there is an error fetching or storing weather data.
     """
     # Fetch weather from the database
-    weather = crud.get_weather_by_city_and_date(db, city, date)
-    if weather:
-        return weather
+    weather_data = crud.get_weather_by_city_and_date(db, city, date)
+    if weather_data:
+        return weather_data
     
     # Fetch weather from the external API
-    data = await fetch_weather_data(city, date)
-    forecast = data["forecast"]["forecastday"][0]["day"]
-    
-    # Create a weather data object
-    weather_data = schemas.WeatherCreate(
-        city=city,
-        date=date,
-        min_temp=forecast.get("mintemp_c"),
-        max_temp=forecast.get("maxtemp_c"),
-        avg_temp=forecast.get("avgtemp_c"),
-        humidity=forecast.get("avghumidity")
-    )
-    
-    # Store weather data in the database
     try:
+        data = await fetch_weather_data(city, date)
+        forecast = data["forecast"]["forecastday"][0]["day"]
+        
+        # Create a weather data object
+        weather_data = schemas.WeatherCreate(
+            city=city,
+            date=date,
+            min_temp=forecast.get("mintemp_c"),
+            max_temp=forecast.get("maxtemp_c"),
+            avg_temp=forecast.get("avgtemp_c"),
+            humidity=forecast.get("avghumidity")
+        )
+        
+        # Store weather data in the database
         return crud.create_weather(db, weather_data)
+    except ValueError as e:
+        logger.error("Error processing weather data: %s", e)
+        raise
     except Exception as e:
-        logger.error("Error saving weather data to database: %s", e)
+        logger.error("Error fetching or saving weather data: %s", e)
         raise
