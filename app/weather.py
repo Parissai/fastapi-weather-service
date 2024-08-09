@@ -11,12 +11,14 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-WEATHER_API_URL = "http://api.weatherapi.com/v1/history.json"
-API_KEY = os.getenv("WEATHER_API_KEY")
+class Config:
+    WEATHER_API_URL = "http://api.weatherapi.com/v1/history.json"
+    API_KEY = os.getenv("WEATHER_API_KEY")
 
-if not API_KEY:
-    logger.error("Weather API key is not set. Please set WEATHER_API_KEY in the environment variables.")
-    raise ValueError("Weather API key is missing.")
+    @staticmethod
+    def validate():
+        if not Config.API_KEY:
+            raise ValueError("Weather API key is missing. Please set WEATHER_API_KEY in the environment variables.")
 
 
 async def fetch_weather_data(city: str, date: str) -> dict:

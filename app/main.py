@@ -5,7 +5,6 @@ from pydantic import BaseModel, field_validator
 import re
 from app import weather, schemas, database
 
-
 class WeatherRequest(BaseModel):
     city: str
     date: str
@@ -15,29 +14,25 @@ class WeatherRequest(BaseModel):
         """
         Validate the format of a date string.
 
-        This method checks if the provided date string matches the expected format 
-        "YYYY-MM-DD". If the format is invalid, it raises a `ValueError`.
+        Checks if the provided date string matches the expected format "YYYY-MM-DD".
+        Raises a `ValueError` if the format is invalid.
 
         Args:
-            cls: The class that the validator is being applied to (used for class methods).
+            cls: The class method context (not used here).
             value (str): The date string to be validated.
 
         Returns:
             str: The original date string if it matches the required format.
 
         Raises:
-            ValueError: If the date string does not match the format "YYYY-MM-DD", 
-            a `ValueError` is raised with a message indicating the format requirement.
-
-        Example:
-            >>> validate_date_format("2024-08-08")
-            '2024-08-08'
-
-            >>> validate_date_format("08-08-2024")
-            ValueError: Invalid date format. Use 'YYYY-MM-DD'.
+            ValueError: If the date string does not match the format "YYYY-MM-DD".
         """
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", value):
             raise ValueError("Invalid date format. Use 'YYYY-MM-DD'.")
+        try:
+            datetime.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("Invalid date. Please ensure the date exists.")
         return value
 
 # Initialize the database
@@ -50,22 +45,25 @@ async def get_weather(city: str, date: str, db: Session = Depends(database.get_d
     """
     Retrieve weather data for a specific city and date.
 
-    This function fetches weather data from the database for the specified city and date. 
-    If the data is not found, it raises an HTTP 404 exception.
+    Fetches weather data from the database for the specified city and date.
+    Raises a 404 error if the data is not found.
 
     Args:
-        city (str): The name of the city for which to retrieve weather data.
-        date (str): The date for which to retrieve weather data, in the format "YYYY-MM-DD".
-        db (Session, optional): The database session dependency, automatically injected by FastAPI.
+        city (str): The name of the city.
+        date (str): The date in the format "YYYY-MM-DD".
+        db (Session, optional): Database session dependency.
 
     Returns:
-        dict: A dictionary containing the weather data for the specified city and date.
+        schemas.WeatherResponse: The weather data for the city and date.
 
     Raises:
-        HTTPException: If no weather data is found for the given city and date, a 404 error is raised.
+        HTTPException: 404 if weather data is not found.
     """
-     
-    date_obj = datetime.strptime(date, "%Y-%m-%d")
+    try:
+        date_obj = datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use 'YYYY-MM-DD'.")
+
     weather_data = await weather.get_weather(db, city, date_obj)
     if not weather_data:
         raise HTTPException(status_code=404, detail="Weather data not found")
